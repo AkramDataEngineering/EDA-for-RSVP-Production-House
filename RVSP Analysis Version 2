@@ -1,0 +1,96 @@
+USE imbd;
+
+/* Now that you have imported the data sets, let’s explore some of the tables. 
+ To begin with, it is beneficial to know the shape of the tables and whether any column has null values.
+ Further in this segment, you will take a look at 'movies' and 'genre' tables.*/
+ 
+ #-----------------SEGMENT 1-----------------------------------------------
+ # Question 1 : Q1. Find the total number of rows in each table of the schema?
+ 
+ # Query :
+ 
+-- Table: Movie
+SELECT Count(*) AS Number_of_rows_in_Movie
+FROM   movie; 
+
+#Output : 7997
+    
+-- Table: Genre
+SELECT Count(*) AS Number_of_rows_in_Genre
+FROM   genre;
+
+#Output : 14662
+
+-- Table: Names
+SELECT Count(*) AS Number_of_rows_in_Names
+FROM   actor_names; 
+
+#Output : 25725
+    
+-- Table: Director_mapping
+SELECT Count(*) AS Number_of_rows_in_Director_mapping
+FROM   director_mapping; 
+
+#Output : 3867
+    
+-- Table: Role_mapping
+SELECT Count(*) AS Number_of_rows_in_Role_mapping
+FROM   role_mapping; 
+
+#Output : 15615
+    
+-- Table: ratings
+SELECT Count(*) AS Number_of_rows_in_Ratings
+FROM   ratings; 
+
+#Output : 7997
+
+/*There are five tables(director_mapping, genre, movie,names,ratings, role_mapping)
+ in IMDB DataBase.*/
+ 
+ #--------------------SEGMENT 2 -------------------------------
+ 
+ -- Q2. Which columns in the MOVIE table have null values?(country, worlwide_gross_income, languages, production_company)
+-- Type your code below:
+SELECT * FROM movie
+LIMIT 5; 
+
+SELECT CASE WHEN SUM(
+		CASE WHEN id IS NULL THEN 1 ELSE 0 END) = 0  THEN 'NULL FREE COLUMN' ELSE 'Null is There' END AS id,
+        
+        CASE WHEN SUM(
+		CASE WHEN title IS NULL THEN 1 ELSE 0 END) = 0 THEN 'Null Is There In the Columns' ELSE 'Null Free Columns' END AS title,
+        
+		CASE WHEN SUM(
+		CASE WHEN year IS NULL THEN 1 ELSE 0 END) = 0 THEN 'Null Is There In the Columns' ELSE 'Null Free Columns' END AS year,
+        
+        CASE WHEN SUM(
+		CASE WHEN date_published IS NULL THEN 1 ELSE 0 END) = 0 THEN 'Null Is There In the Columns' ELSE 'Null Free Columns' END AS date_published,
+        
+        CASE WHEN SUM(
+		CASE WHEN duration IS NULL THEN 1 ELSE 0 END) = 0 THEN 'Null Is There In the Columns' ELSE 'Null Free Columns' END AS duration,
+        
+        CASE WHEN SUM(
+		CASE WHEN country IS NULL THEN 1 ELSE 0 END) = 0 THEN 'Null Is There In the Columns' ELSE 'Null Free Columns' END AS country,
+        
+        CASE WHEN SUM(
+		CASE WHEN worlwide_gross_income IS NULL THEN 1 ELSE 0 END) = 0 THEN 'Null Is There In the Columns' ELSE 'Null Free Columns' END AS worlwide_gross_income,
+        
+        CASE WHEN SUM(
+		CASE WHEN languages IS NULL THEN 1 ELSE 0 END) = 0 THEN 'Null Is There In the Columns' ELSE 'Null Free Columns' END AS languages,
+        
+        CASE WHEN SUM(
+		CASE WHEN production_company IS NULL THEN 1 ELSE 0 END) = 0 THEN 'Null Is There In the Columns' ELSE 'Null Free Columns' END AS production_company
+FROM movie;
+
+/*Movie table has nine columns : id ,title, year, date_published date, duration, country, worlwide_gross_income, languages, production_company.
+
+#------------------SEGMENT 3 -----------------------------------------------------------------------------------------------------------------------------------
+-- Now as you can see four columns of the movie table has null values(column:title,year,date_published,duration). 
+
+-- Let's look at the at the movies released each year. 
+
+--------------------------------------------------------------------------------------------------------------------------
+-- Q3. Find the total number of movies released each year? How does the trend look month wise? (Output expected)
+
+ 
