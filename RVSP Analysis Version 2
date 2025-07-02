@@ -826,27 +826,180 @@ GROUP BY genre
 |		.		|			.		|	       .		  |	   .	    		 |		.	       |
 +---------------+-------------------+---------------------+----------------------+-----------------+*/
 -- Query:
-
-
-SELECT genre as Genre,COUNT(id)  Movie_Count
-FROM genre g
-INNER JOIN movie m 
+#First Lets Find out the TOP 3 Genre
+SELECT genre,COUNT(movie_id) FROM genre g
+INNER JOIN movie m
 ON m.id = g.movie_id
 GROUP BY genre
 ORDER BY COUNT(id) DESC
-# FROM HERE WE KNOW THAT drama,Comedy and Thriller is the Top 3 Genere
-WITH Movie_info AS (
-		SELECT genre as Genre,year as Movie_Year, title as Movie_Name, worlwide_gross_income AS Gross_Income,
-		DENSE_RANK() OVER(PARTITION BY year ORDER BY worlwide_gross_income DESC) AS Movie_Rank
-		FROM genre g
-		INNER JOIN movie m 
-		ON m.id = g.movie_id
-		WHERE UPPER(genre) IN ('DRAMA','COMEDY','THRILLER')
+
+-- SO DRAMA, COMEDY and THRILLER is the TOP 3 GENRE
+WITH Top_5_Movies  AS (
+					SELECT title Movie_Name  ,year Release_Year,worlwide_gross_income as Box_Office_Collection,
+                    genre as Top_3_Genre ,
+					DENSE_RANK() OVER(PARTITION BY year ORDER BY worlwide_gross_income DESC) as Movie_Rank
+                    # YOU Can USE RANK OR ROW_NUMBER as per Prblem Statement
+					FROM movie m
+					INNER JOIN genre g
+					ON g.movie_id = m.id
+					WHERE UPPER(genre) IN ('DRAMA','COMEDY','THRILLER')
                     )
-SELECT Genre,Movie_Year,Movie_Name,Gross_Income,Movie_Rank FROM Movie_info
-WHERE Movie_Rank <=5                    
+SELECT  DISTINCT Movie_Name,Release_Year,
+CASE 
+WHEN Box_Office_Collection REGEXP '$' THEN REPLACE(Box_Office_Collection,"$","INR")
+ELSE Box_Office_Collection END,#ITS INR COLLECTION MONEY OR WE MAY ALSO CONVERT THE $ = INR * STOCK EXCHNAGE PRICE
+Top_3_Genre,
+Movie_Rank
+FROM Top_5_Movies 
+WHERE Movie_Rank <6
+/*#INSIGHTS :LETS talk about TOP 1 of Each Year In 2017 : Shantamanam Bhavati,
+												In 2018 : THE VILLIAN,
+                                                In 2019 : PRESCIENCE
+                                                In 2019 : PRESCIENCE
+                                                
+#--------------------------------------------------------------------------------------------
+-- Finally, let’s find out the names of the top two production houses that have produced the highest number of hits among multilingual movies.
+-- Q27.  Which are the top two production houses that have produced the highest number of hits (median rating >= 8) among multilingual movies?
+/* Output format:
++-------------------+-------------------+---------------------+
+|production_company |movie_count		|		prod_comp_rank|
++-------------------+-------------------+---------------------+
+| The Archers		|		830			|		1	  		  |
+|	.				|		.			|			.		  |
+|	.				|		.			|			.		  |
++-------------------+-------------------+---------------------+*/
+#------------------------------------------------------------------------------------------
+#OUTPUT: 
+WITH Top_PH AS (
+			SELECT production_company,COUNT(id) Number_of_multilingual_movies,
+			RANK() OVER(ORDER BY COUNT(id) DESC) AS Movie_Ranked
+			FROM movie m
+			INNER JOIN ratings r
+			ON r.movie_id = m.id
+			WHERE LOWER(languages) LIKE '%,%' AND production_company IS NOT NULL AND median_rating >=8
+			GROUP BY production_company
+			)
+SELECT * FROM Top_PH
+WHERE  MOvie_Ranked <3 
 
+#IMPORTANT: The Main Learning here is using LIKE %,%  which which where ever the ',' is there it will be multi-lingual
+# You can do the same using POSITION(',' IN language) >0
 
+WITH Top_PH AS (
+			SELECT production_company,COUNT(id) Number_of_multilingual_movies,
+			RANK() OVER(ORDER BY COUNT(id) DESC) AS Movie_Ranked
+			FROM movie m
+			INNER JOIN ratings r
+			ON r.movie_id = m.id
+			WHERE POSITION(',' IN languages)>0 AND production_company IS NOT NULL AND median_rating >=8 # OPTIONAL WAY TO FILTER
+			GROUP BY production_company
+			)
+SELECT * FROM Top_PH
+WHERE  MOvie_Ranked <3 
+        
+# INSIGHT: Top 2 Production Houses- 'Star Cinema' with 7 HITS and Twentieth Century Fox with 4 HITS IN Multi: Language
+ 
+ #-------------------------------------------------------------------------------------------------------------------------
+ 
+ -- Q28. Who are the top 3 actresses based on number of Super Hit movies (average rating >8) in drama genre?
+/* Output format:
++---------------+-------------------+---------------------+----------------------+-----------------+
+| actress_name	|	total_votes		|	movie_count		  |actress_avg_rating	 |actress_rank	   |
++---------------+-------------------+---------------------+----------------------+-----------------+
+|	Laura Dern	|			1016	|	       1		  |	   9.60			     |		1	       |
+|		.		|			.		|	       .		  |	   .	    		 |		.	       |
+|		.		|			.		|	       .		  |	   .	    		 |		.	       |
++---------------+-------------------+---------------------+----------------------+-----------------+*/
 
-#------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------
+#Query :
+#FILTERED QUERY using CTE
+WITH Top_Actress AS (
+			SELECT name Actress_Name,SUM(total_votes) Votes,COUNT(r.movie_id) Hit_Movies,
+			ROUND(SUM(avg_rating*total_votes)/Sum(total_votes),2) as Actress_Avg_Rating
+			FROM actor_names an
+			INNER JOIN role_mapping rm
+			ON rm.name_id = an.id
+			INNER JOIN ratings r USING(movie_id)
+			INNER JOIN genre g USING(movie_id)
+			WHERE LOWER(category) = 'actress' AND avg_rating>=8 AND UPPER(genre) = 'DRAMA'
+			GROUP BY name
+			 )
+SELECT *,
+ROW_NUMBER() OVER (ORDER BY Hit_Movies DESC) Actress_Rank FROM Top_Actress 
+LIMIT 3
 
+# INSIGHTS : The Top 1 is An Indian Actress Nameed : Parvathy Thiruvothu and Its a  Proud Movment for a Drama genre.
+
+#-------------------------------------THE LAST ANALYTICS--------------------------------------------------------------
+
+/* Q29. Get the following details for top 9 directors (based on number of movies)
+Director id
+Name
+Number of movies directed by these directors
+Average inter movie duration in days OR average release interval in days
+Average movie ratings OR  average/min/max ratings
+Total votes
+Min rating 
+Max rating
+total movie durations or cumulative film duration.
+
+Format:
++---------------+-------------------+---------------------+----------------------+--------------+--------------+------------+------------+----------------+
+| director_id	|	director_name	|	number_of_movies  |	avg_inter_movie_days |	avg_rating	| total_votes  | min_rating	| max_rating | total_duration |
++---------------+-------------------+---------------------+----------------------+--------------+--------------+------------+------------+----------------+
+|nm1777967		|	A.L. Vijay		|			5		  |	       177			 |	   5.65	    |	1754	   |	3.7		|	6.9		 |		613		  |
+|	.			|		.			|			.		  |	       .			 |	   .	    |	.		   |	.		|	.		 |		.		  |
+|	.			|		.			|			.		  |	       .			 |	   .	    |	.		   |	.		|	.		 |		.		  |
+|	.			|		.			|			.		  |	       .			 |	   .	    |	.		   |	.		|	.		 |		.		  |
+|	.			|		.			|			.		  |	       .			 |	   .	    |	.		   |	.		|	.		 |		.		  |
+|	.			|		.			|			.		  |	       .			 |	   .	    |	.		   |	.		|	.		 |		.		  |
+|	.			|		.			|			.		  |	       .			 |	   .	    |	.		   |	.		|	.		 |		.		  |
+|	.			|		.			|			.		  |	       .			 |	   .	    |	.		   |	.		|	.		 |		.		  |
+|	.			|		.			|			.		  |	       .			 |	   .	    |	.		   |	.		|	.		 |		.		  |
++---------------+-------------------+---------------------+----------------------+--------------+--------------+------------+------------+----------------+
+
+--------------------------------------------------------------------------------------------*/
+#Query : 
+
+WITH Movie_Date_CTE AS (
+				SELECT dm.name_id as Director_ID,
+                an.name AS Director_Name,
+                dm.movie_id as MovieID,
+                m.date_published Release_Date,
+				LEAD(m.date_published,1)  OVER (PARTITION BY dm.name_id ORDER BY date_published,dm.movie_id) Next_Release_Date_by_Director,
+				r.avg_rating AS Movie_Rating,
+				r.total_votes AS Earned_Votes,
+                m.duration as Movie_Time
+				FROM director_mapping dm
+				INNER JOIN actor_names an
+					ON an.id = dm.name_id
+				INNER JOIN movie m
+					ON m.id = dm.movie_id
+				INNER JOIN ratings r
+					ON r.movie_id =m.id
+                    ),
+                    Top_Directors_CTE AS (
+										SELECT *,DATEDIFF(Next_Release_Date_by_Director,Release_Date) AS Release_Interval_In_Days
+                                        FROM Movie_Date_CTE
+                                      )
+SELECT Director_ID,
+	   Director_Name,
+       COUNT(MovieID) Movie_ID,
+       ROUND(AVG(Release_Interval_In_Days),0) Average_Next_Release_Time_In_Days,
+       ROUND(AVG(Movie_Rating),2) Avg_Movie_Rating,
+       SUM(Earned_Votes) Total_Earned_Votes,
+       MIN(Movie_Rating) AS Lowest_Rated_of_Director,
+       MAX(Movie_Rating) AS Highest_Rated_of_Director,
+       ROUND((SUM(Movie_Time)/60),2) AS Total_Movie_Time_Hrs
+FROM  Top_Directors_CTE
+GROUP BY Director_ID
+ORDER BY   COUNT(MovieID) DESC
+LIMIT 9 # FOR Top 9 Directors   
+
+#INIGHTS: We have One Indian Director in the Top 9 list and At Rank 2 Name : A.L.Vijay directed 5 movies and Takes Avg 177 days
+# to Make the Next Release ,with average movie rating of 5+ and Having JHihest Rating of 6.9 and Overall Time of the Movie Shooted tilldate 
+# Is  10.22 hwich is Highest Among 9 Directors.
+
+ 
+/*Created CTE date_published_info, used inner join to merge the tables and then wrote a query to fetch required variables*/                            
